@@ -48,9 +48,10 @@ after_success:
 - make docker-build
 - docker push kiali/kiali
 
-# Build only the master branch (for "latest" release) and version tags (e.g. "v1.2.3" or "v1.1.2.RC2" or "v2.1.5.Final")
+# Build only the master branch (for "latest" release), pre-releases and version tags (e.g. "v1.2.3" or "v1.1.2.RC2" or "v2.1.5.Final")
 # Add branch names below if we want to push docker images built off of those branches.
 branches:
   only:
   - master
+  - pre-release
   - /^v(\d+\.){2}(\d+){1}(\.[a-zA-Z\d]+)?$/
