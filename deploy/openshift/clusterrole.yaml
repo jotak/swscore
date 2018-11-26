@@ -89,3 +89,8 @@ rules:
   - routes
   verbs:
   - get
+- apiGroups: ["monitoring.kiali.io"]
+  resources:
+  - monitoringdashboards
+  verbs:
+  - get
