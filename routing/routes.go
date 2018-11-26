@@ -449,6 +449,13 @@ func NewRoutes() (r *Routes) {
 			handlers.WorkloadMetrics,
 			true,
 		},
+		{
+			"RuntimeMetrics",
+			"GET",
+			"/api/namespaces/{namespace}/apps/{app}/rtmetrics/{template}",
+			handlers.RuntimeMetrics,
+			true,
+		},
 		// swagger:route GET /api/namespaces/{namespace}/services/{service}/health services serviceHealth
 		// ---
 		// Get health associated to the given service

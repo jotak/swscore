@@ -244,13 +244,13 @@ func fetchAllMetrics(api v1.API, q *MetricsQuery, labels, labelsError, grouping,
 	var wg sync.WaitGroup
 	fetchRate := func(p8sFamilyName string, metric **Metric, lbl string) {
 		defer wg.Done()
-		m := fetchRateRange(api, p8sFamilyName, lbl, grouping, q)
+		m := fetchRateRange(api, p8sFamilyName, lbl, q.RateFunc, q.RateInterval, grouping, q.Range)
 		*metric = m
 	}
 
 	fetchHisto := func(p8sFamilyName string, histo *Histogram) {
 		defer wg.Done()
-		h := fetchHistogramRange(api, p8sFamilyName, labels, grouping, q)
+		h := fetchHistogramRange(api, p8sFamilyName, labels, q.RateInterval, grouping, q.Range, q.Avg, q.Quantiles)
 		*histo = h
 	}
 
@@ -367,23 +367,23 @@ func splitHistoTelemetry(histo Histogram) (source, dest Histogram) {
 	return source, dest
 }
 
-func fetchRateRange(api v1.API, metricName string, labels string, grouping string, q *MetricsQuery) *Metric {
+func fetchRateRange(api v1.API, metricName, labels, rateFunc, rateInterval, grouping string, bounds v1.Range) *Metric {
 	var query string
 	// Example: round(sum(rate(my_counter{foo=bar}[5m])) by (baz), 0.001)
 	if grouping == "" {
-		query = fmt.Sprintf("round(sum(%s(%s%s[%s])), 0.001)", q.RateFunc, metricName, labels, q.RateInterval)
+		query = fmt.Sprintf("round(sum(%s(%s%s[%s])), 0.001)", rateFunc, metricName, labels, rateInterval)
 	} else {
-		query = fmt.Sprintf("round(sum(%s(%s%s[%s])) by (%s), 0.001)", q.RateFunc, metricName, labels, q.RateInterval, grouping)
+		query = fmt.Sprintf("round(sum(%s(%s%s[%s])) by (%s), 0.001)", rateFunc, metricName, labels, rateInterval, grouping)
 	}
-	return fetchRange(api, query, q.Range)
+	return fetchRange(api, query, bounds)
 }
 
-func fetchHistogramRange(api v1.API, metricName string, labels string, grouping string, q *MetricsQuery) Histogram {
+func fetchHistogramRange(api v1.API, metricName, labels, rateInterval, grouping string, bounds v1.Range, avg bool, quantiles []string) Histogram {
 	histogram := make(Histogram)
 
 	// Note: the p8s queries are not run in parallel here, but they are at the caller's place.
 	//	This is because we may not want to create too many threads in the lowest layer
-	if q.Avg {
+	if avg {
 		groupingAvg := ""
 		if grouping != "" {
 			groupingAvg = fmt.Sprintf(" by (%s)", grouping)
@@ -391,20 +391,22 @@ func fetchHistogramRange(api v1.API, metricName string, labels string, grouping 
 		// Average
 		// Example: sum(rate(my_histogram_sum{foo=bar}[5m])) by (baz) / sum(rate(my_histogram_count{foo=bar}[5m])) by (baz)
 		query := fmt.Sprintf(
-			"round(sum(rate(%s_sum%s[%s]))%s / sum(rate(%s_count%s[%s]))%s, 0.001)", metricName, labels, q.RateInterval, groupingAvg,
-			metricName, labels, q.RateInterval, groupingAvg)
-		histogram["avg"] = fetchRange(api, query, q.Range)
+			"round(sum(rate(%s_sum%s[%s]))%s / sum(rate(%s_count%s[%s]))%s, 0.001)", metricName, labels, rateInterval, groupingAvg,
+			metricName, labels, rateInterval, groupingAvg)
+		log.Infof("Query: %s\n", query)
+		histogram["avg"] = fetchRange(api, query, bounds)
 	}
 
 	groupingQuantile := ""
 	if grouping != "" {
 		groupingQuantile = fmt.Sprintf(",%s", grouping)
 	}
-	for _, quantile := range q.Quantiles {
+	for _, quantile := range quantiles {
 		// Example: round(histogram_quantile(0.5, sum(rate(my_histogram_bucket{foo=bar}[5m])) by (le,baz)), 0.001)
 		query := fmt.Sprintf(
-			"round(histogram_quantile(%s, sum(rate(%s_bucket%s[%s])) by (le%s)), 0.001)", quantile, metricName, labels, q.RateInterval, groupingQuantile)
-		histogram[quantile] = fetchRange(api, query, q.Range)
+			"round(histogram_quantile(%s, sum(rate(%s_bucket%s[%s])) by (le%s)), 0.001)", quantile, metricName, labels, rateInterval, groupingQuantile)
+		histogram[quantile] = fetchRange(api, query, bounds)
+		log.Infof("Query: %s\n", query)
 	}
 
 	return histogram

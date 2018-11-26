@@ -25,6 +25,8 @@ type ClientInterface interface {
 	GetAppRequestRates(namespace, app, ratesInterval string, queryTime time.Time) (model.Vector, model.Vector, error)
 	GetWorkloadRequestRates(namespace, workload, ratesInterval string, queryTime time.Time) (model.Vector, model.Vector, error)
 	GetSourceWorkloads(namespace string, namespaceCreationTime time.Time, servicename string) (map[string][]Workload, error)
+	FetchRateRange(metricName, labels, rateFunc, rateInterval, grouping string, bounds v1.Range) *Metric
+	FetchHistogramRange(metricName, labels, rateInterval, grouping string, bounds v1.Range, avg bool, quantiles []string) Histogram
 }
 
 // Client for Prometheus API.
@@ -162,6 +164,14 @@ func (in *Client) GetAppRequestRates(namespace, app, ratesInterval string, query
 // Returns (in, out, error)
 func (in *Client) GetWorkloadRequestRates(namespace, workload, ratesInterval string, queryTime time.Time) (model.Vector, model.Vector, error) {
 	return getItemRequestRates(in.api, namespace, workload, "workload", queryTime, ratesInterval)
+}
+
+func (in *Client) FetchRateRange(metricName, labels, rateFunc, rateInterval, grouping string, bounds v1.Range) *Metric {
+	return fetchRateRange(in.api, metricName, labels, rateFunc, rateInterval, grouping, bounds)
+}
+
+func (in *Client) FetchHistogramRange(metricName, labels, rateInterval, grouping string, bounds v1.Range, avg bool, quantiles []string) Histogram {
+	return fetchHistogramRange(in.api, metricName, labels, rateInterval, grouping, bounds, avg, quantiles)
 }
 
 // API returns the Prometheus V1 HTTP API for performing calls not supported natively by this client

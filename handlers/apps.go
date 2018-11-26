@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/gorilla/mux"
 
@@ -100,4 +101,58 @@ func getAppMetrics(w http.ResponseWriter, r *http.Request, promClientSupplier fu
 
 	metrics := prometheusClient.GetMetrics(&params)
 	RespondWithJSON(w, http.StatusOK, metrics)
+}
+
+// RuntimeMetrics is the API handler to fetch runtime metrics to be displayed, related to a single app
+func RuntimeMetrics(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	namespace := vars["namespace"]
+	app := vars["app"]
+	template := vars["template"]
+	version := r.URL.Query().Get("version")
+
+	k8s, err := kubernetes.NewClient()
+	if err != nil {
+		log.Error(err)
+		RespondWithError(w, http.StatusServiceUnavailable, "Kubernetes client error: "+err.Error())
+		return
+	}
+	prometheusClient, err := prometheus.NewClient()
+	if err != nil {
+		log.Error(err)
+		RespondWithError(w, http.StatusServiceUnavailable, "Prometheus client error: "+err.Error())
+		return
+	}
+
+	namespaceInfo := checkNamespaceAccess(w, k8s, prometheusClient, vars["namespace"])
+	if namespaceInfo == nil {
+		return
+	}
+
+	monitoringClient, err := kubernetes.NewKialiMonitoringClient()
+	if err != nil {
+		log.Error(err)
+		RespondWithError(w, http.StatusServiceUnavailable, "Kiali monitoring client error: "+err.Error())
+		return
+	}
+
+	svc := business.NewDashboardsService(monitoringClient, prometheusClient)
+
+	params := prometheus.MetricsQuery{Namespace: namespace, App: app}
+	err = extractMetricsQueryParams(r, &params, namespaceInfo)
+	if err != nil {
+		RespondWithError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	dashboard, err := svc.GetDashboard(params, template, version)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			RespondWithError(w, http.StatusNotFound, err.Error())
+		} else {
+			RespondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+	RespondWithJSON(w, http.StatusOK, dashboard)
 }

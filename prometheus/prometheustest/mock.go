@@ -122,3 +122,13 @@ func (o *PromClientMock) GetSourceWorkloads(namespace string, namespaceCreationT
 	args := o.Called(namespace, namespaceCreationTime, servicename)
 	return args.Get(0).(map[string][]prometheus.Workload), args.Error(1)
 }
+
+func (o *PromClientMock) FetchRateRange(metricName, labels, rateFunc, rateInterval, grouping string, bounds v1.Range) *prometheus.Metric {
+	args := o.Called(metricName, labels, rateFunc, rateInterval, grouping, bounds)
+	return args.Get(0).(*prometheus.Metric)
+}
+
+func (o *PromClientMock) FetchHistogramRange(metricName, labels, rateInterval, grouping string, bounds v1.Range, avg bool, quantiles []string) prometheus.Histogram {
+	args := o.Called(metricName, labels, rateInterval, grouping, bounds, avg, quantiles)
+	return args.Get(0).(prometheus.Histogram)
+}

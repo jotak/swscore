@@ -1,8 +1,9 @@
 package handlers
 
 import (
-	"k8s.io/apimachinery/pkg/api/errors"
 	"net/http"
+
+	"k8s.io/apimachinery/pkg/api/errors"
 
 	"github.com/gorilla/mux"
 
