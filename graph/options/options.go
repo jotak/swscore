@@ -223,26 +223,21 @@ func parseAppenders(params url.Values, o Options) []appender.Appender {
 			switch strings.TrimSpace(requestedAppender) {
 			case appender.DeadNodeAppenderName:
 				requestedAppenders[appender.DeadNodeAppenderName] = true
-			case appender.ServiceEntryAppenderName:
-				requestedAppenders[appender.ServiceEntryAppenderName] = true
-			case appender.IstioAppenderName:
-				requestedAppenders[appender.IstioAppenderName] = true
 			case appender.ResponseTimeAppenderName:
 				requestedAppenders[appender.ResponseTimeAppenderName] = true
-			case appender.SecurityPolicyAppenderName:
-				requestedAppenders[appender.SecurityPolicyAppenderName] = true
-			case appender.SidecarsCheckAppenderName:
-				requestedAppenders[appender.SidecarsCheckAppenderName] = true
 			case appender.UnusedNodeAppenderName:
 				requestedAppenders[appender.UnusedNodeAppenderName] = true
 			case "":
 				// skip
 			default:
-				graph.BadRequest(fmt.Sprintf("Invalid appender [%s]", strings.TrimSpace(requestedAppender)))
+				// graph.BadRequest(fmt.Sprintf("Invalid appender [%s]", strings.TrimSpace(requestedAppender)))
 			}
 		}
 	} else {
-		allAppenders = true
+		requestedAppenders[appender.DeadNodeAppenderName] = true
+		requestedAppenders[appender.ResponseTimeAppenderName] = true
+		requestedAppenders[appender.UnusedNodeAppenderName] = true
+		// allAppenders = true
 	}
 
 	// The appender order is important

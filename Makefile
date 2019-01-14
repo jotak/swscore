@@ -62,7 +62,7 @@ VERBOSE_MODE ?= 3
 
 # Declares the namespace where the objects are to be deployed.
 # For OpenShift, this is the name of the project.
-NAMESPACE ?= istio-system
+NAMESPACE ?= linkerd
 
 # Use default go1.8 GOPATH if it isn't user defined
 GOPATH ?= ${HOME}/go
@@ -266,7 +266,7 @@ deploy/openshift/deploy-kiali-to-openshift.sh
 ## openshift-undeploy: Undeploy from Openshift project.
 openshift-undeploy: .openshift-validate
 	@echo Undeploying from OpenShift project ${NAMESPACE}
-	${OC} delete all,secrets,sa,templates,configmaps,deployments,clusterroles,clusterrolebindings,virtualservices,destinationrules,ingresses,customresourcedefinitions --selector=app=kiali -n ${NAMESPACE}
+	${OC} delete all,secrets,sa,templates,configmaps,deployments,clusterroles,clusterrolebindings,ingresses,customresourcedefinitions --selector=app=kiali -n ${NAMESPACE}
 
 ## openshift-reload-image: Refreshing image in Openshift project.
 openshift-reload-image: .openshift-validate
@@ -298,7 +298,7 @@ deploy/kubernetes/deploy-kiali-to-kubernetes.sh
 ## k8s-undeploy: Undeploy docker image in Kubernetes namespace.
 k8s-undeploy: .k8s-validate
 	@echo Undeploying from Kubernetes namespace ${NAMESPACE}
-	${KUBECTL} delete all,secrets,sa,configmaps,deployments,ingresses,clusterroles,clusterrolebindings,virtualservices,destinationrules,customresourcedefinitions --selector=app=kiali -n ${NAMESPACE}
+	${KUBECTL} delete all,secrets,sa,configmaps,deployments,ingresses,clusterroles,clusterrolebindings,customresourcedefinitions --selector=app=kiali -n ${NAMESPACE}
 
 ## k8s-reload-image: Refreshing image in Kubernetes namespace.
 k8s-reload-image: .k8s-validate

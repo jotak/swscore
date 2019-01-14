@@ -62,29 +62,30 @@ func (a ResponseTimeAppender) appendGraph(trafficMap graph.TrafficMap, namespace
 
 	// query prometheus for the responseTime info in three queries:
 	// 1) query for responseTime originating from "unknown" (i.e. the internet)
-	groupBy := "le,source_workload_namespace,source_workload,source_app,source_version,destination_service_namespace,destination_service_name,destination_workload,destination_app,destination_version"
-	query := fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{reporter="destination",source_workload="unknown",destination_service_namespace="%v",response_code=~"2[0-9]{2}"}[%vs])) by (%s))`,
-		quantile,
-		"istio_request_duration_seconds_bucket",
-		namespace,
-		int(duration.Seconds()), // range duration for the query
-		groupBy)
-	unkVector := promQuery(query, time.Unix(a.QueryTime, 0), client.API(), a)
+	groupBy := "le,namespace,deployment,dst_namespace,dst_service,dst_deployment"
+	//	groupBy := "le,source_workload_namespace,source_workload,source_app,source_version,destination_service_namespace,destination_service_name,destination_workload,destination_app,destination_version"
+	// query := fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{reporter="destination",source_workload="unknown",destination_service_namespace="%v",response_code=~"2[0-9]{2}"}[%vs])) by (%s))`,
+	// 	quantile,
+	// 	"response_latency_ms_bucket",
+	// 	namespace,
+	// 	int(duration.Seconds()), // range duration for the query
+	// 	groupBy)
+	// unkVector := promQuery(query, time.Unix(a.QueryTime, 0), client.API(), a)
 
-	// 2) query for responseTime originating from a workload outside of the namespace. Exclude any "unknown" source telemetry (an unusual corner case)
-	query = fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{reporter="source",source_workload_namespace!="%v",source_workload!="unknown",destination_service_namespace="%v",response_code=~"2[0-9]{2}"}[%vs])) by (%s))`,
-		quantile,
-		"istio_request_duration_seconds_bucket",
-		namespace,
-		namespace,
-		int(duration.Seconds()), // range duration for the query
-		groupBy)
-	outVector := promQuery(query, time.Unix(a.QueryTime, 0), client.API(), a)
+	// // 2) query for responseTime originating from a workload outside of the namespace. Exclude any "unknown" source telemetry (an unusual corner case)
+	// query = fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{reporter="source",source_workload_namespace!="%v",source_workload!="unknown",destination_service_namespace="%v",response_code=~"2[0-9]{2}"}[%vs])) by (%s))`,
+	// 	quantile,
+	// 	"response_latency_ms_bucket",
+	// 	namespace,
+	// 	namespace,
+	// 	int(duration.Seconds()), // range duration for the query
+	// 	groupBy)
+	// outVector := promQuery(query, time.Unix(a.QueryTime, 0), client.API(), a)
 
 	// 3) query for responseTime originating from a workload inside of the namespace
-	query = fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{reporter="source",source_workload_namespace="%v",response_code=~"2[0-9]{2}"}[%vs])) by (%s))`,
+	query := fmt.Sprintf(`histogram_quantile(%.2f, sum(rate(%s{namespace="%s"}[%vs])) by (%s))`,
 		quantile,
-		"istio_request_duration_seconds_bucket",
+		"response_latency_ms_bucket",
 		namespace,
 		int(duration.Seconds()), // range duration for the query
 		groupBy)
@@ -92,8 +93,8 @@ func (a ResponseTimeAppender) appendGraph(trafficMap graph.TrafficMap, namespace
 
 	// create map to quickly look up responseTime
 	responseTimeMap := make(map[string]float64)
-	a.populateResponseTimeMap(responseTimeMap, &unkVector)
-	a.populateResponseTimeMap(responseTimeMap, &outVector)
+	// a.populateResponseTimeMap(responseTimeMap, &unkVector)
+	// a.populateResponseTimeMap(responseTimeMap, &outVector)
 	a.populateResponseTimeMap(responseTimeMap, &inVector)
 
 	// istio component telemetry is only reported destination-side, so we must perform additional queries
@@ -144,29 +145,25 @@ func applyResponseTime(trafficMap graph.TrafficMap, responseTimeMap map[string]f
 func (a ResponseTimeAppender) populateResponseTimeMap(responseTimeMap map[string]float64, vector *model.Vector) {
 	for _, s := range *vector {
 		m := s.Metric
-		lSourceWlNs, sourceWlNsOk := m["source_workload_namespace"]
-		lSourceWl, sourceWlOk := m["source_workload"]
-		lSourceApp, sourceAppOk := m["source_app"]
-		lSourceVer, sourceVerOk := m["source_version"]
-		lDestSvcNs, destSvcNsOk := m["destination_service_namespace"]
-		lDestSvcName, destSvcNameOk := m["destination_service_name"]
-		lDestWl, destWlOk := m["destination_workload"]
-		lDestApp, destAppOk := m["destination_app"]
-		lDestVer, destVerOk := m["destination_version"]
-		if !sourceWlNsOk || !sourceWlOk || !sourceAppOk || !sourceVerOk || !destSvcNsOk || !destSvcNameOk || !destWlOk || !destAppOk || !destVerOk {
+		lSourceWlNs, sourceWlNsOk := m["namespace"]
+		lSourceWl, sourceWlOk := m["deployment"]
+		lDestSvcNs, destSvcNsOk := m["dst_namespace"]
+		lDestSvcName, destSvcNameOk := m["dst_service"]
+		lDestWl, destWlOk := m["dst_deployment"]
+		if !sourceWlNsOk || !sourceWlOk || !destSvcNsOk || !destSvcNameOk || !destWlOk {
 			log.Warningf("Skipping %v, missing expected labels", m.String())
 			continue
 		}
 
 		sourceWlNs := string(lSourceWlNs)
 		sourceWl := string(lSourceWl)
-		sourceApp := string(lSourceApp)
-		sourceVer := string(lSourceVer)
+		sourceApp := "Unknown"
+		sourceVer := "Unknown"
 		destSvcNs := string(lDestSvcNs)
 		destSvcName := string(lDestSvcName)
 		destWl := string(lDestWl)
-		destApp := string(lDestApp)
-		destVer := string(lDestVer)
+		destApp := "Unknown"
+		destVer := "Unknown"
 
 		// to best preserve precision convert from secs to millis now, otherwise the
 		// thousandths place is dropped downstream.

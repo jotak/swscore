@@ -294,37 +294,37 @@ func checkNodeType(expected string, n *graph.Node) {
 // buildNamespaceTrafficMap returns a map of all namespace nodes (key=id).  All
 // nodes either directly send and/or receive requests from a node in the namespace.
 func buildNamespaceTrafficMap(namespace string, o options.Options, client *prometheus.Client) graph.TrafficMap {
-	httpMetric := "istio_requests_total"
+	httpMetric := "request_total"
 	duration := o.Namespaces[namespace].Duration
 
-	// query prometheus for request traffic in three queries:
-	// 1) query for traffic originating from "unknown" (i.e. the internet).
-	groupBy := "source_workload_namespace,source_workload,source_app,source_version,destination_service_namespace,destination_service_name,destination_workload,destination_app,destination_version,response_code"
-	query := fmt.Sprintf(`sum(rate(%s{reporter="destination",source_workload="unknown",destination_service_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
-		httpMetric,
-		namespace,
-		"[2345][0-9][0-9]",      // regex for valid response_codes
-		int(duration.Seconds()), // range duration for the query
-		groupBy)
-	unkVector := promQuery(query, time.Unix(o.QueryTime, 0), client.API())
+	// // query prometheus for request traffic in three queries:
+	// // 1) query for traffic originating from "unknown" (i.e. the internet).
+	groupBy := "namespace,deployment,dst_namespace,dst_service,dst_deployment"
+	// query := fmt.Sprintf(`sum(rate(%s{reporter="destination",source_workload="unknown",destination_service_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
+	// 	httpMetric,
+	// 	namespace,
+	// 	"[2345][0-9][0-9]",      // regex for valid response_codes
+	// 	int(duration.Seconds()), // range duration for the query
+	// 	groupBy)
+	// unkVector := promQuery(query, time.Unix(o.QueryTime, 0), client.API())
 
-	// 2) query for traffic originating from a workload outside of the namespace.  Exclude any "unknown" source telemetry (an unusual corner case)
-	query = fmt.Sprintf(`sum(rate(%s{reporter="source",source_workload_namespace!="%s",source_workload!="unknown",destination_service_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
-		httpMetric,
-		namespace,
-		namespace,
-		"[2345][0-9][0-9]",      // regex for valid response_codes
-		int(duration.Seconds()), // range duration for the query
-		groupBy)
+	// // 2) query for traffic originating from a workload outside of the namespace.  Exclude any "unknown" source telemetry (an unusual corner case)
+	// query = fmt.Sprintf(`sum(rate(%s{reporter="source",source_workload_namespace!="%s",source_workload!="unknown",destination_service_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
+	// 	httpMetric,
+	// 	namespace,
+	// 	namespace,
+	// 	"[2345][0-9][0-9]",      // regex for valid response_codes
+	// 	int(duration.Seconds()), // range duration for the query
+	// 	groupBy)
 
-	// fetch the externally originating request traffic time-series
-	extVector := promQuery(query, time.Unix(o.QueryTime, 0), client.API())
+	// // fetch the externally originating request traffic time-series
+	// extVector := promQuery(query, time.Unix(o.QueryTime, 0), client.API())
 
 	// 3) query for traffic originating from a workload inside of the namespace
-	query = fmt.Sprintf(`sum(rate(%s{reporter="source",source_workload_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
+	// query = fmt.Sprintf(`sum(rate(%s{reporter="source",source_workload_namespace="%s",response_code=~"%s"} [%vs])) by (%s)`,
+	query := fmt.Sprintf(`sum(rate(%s{namespace="%s"} [%vs])) by (%s)`,
 		httpMetric,
 		namespace,
-		"[2345][0-9][0-9]",      // regex for valid response_codes
 		int(duration.Seconds()), // range duration for the query
 		groupBy)
 
@@ -333,8 +333,6 @@ func buildNamespaceTrafficMap(namespace string, o options.Options, client *prome
 
 	// create map to aggregate traffic by response code
 	trafficMap := graph.NewTrafficMap()
-	populateTrafficMapHttp(trafficMap, &unkVector, o)
-	populateTrafficMapHttp(trafficMap, &extVector, o)
 	populateTrafficMapHttp(trafficMap, &intVector, o)
 
 	// istio component telemetry is only reported destination-side, so we must perform additional queries
@@ -410,32 +408,27 @@ func buildNamespaceTrafficMap(namespace string, o options.Options, client *prome
 func populateTrafficMapHttp(trafficMap graph.TrafficMap, vector *model.Vector, o options.Options) {
 	for _, s := range *vector {
 		m := s.Metric
-		lSourceWlNs, sourceWlNsOk := m["source_workload_namespace"]
-		lSourceWl, sourceWlOk := m["source_workload"]
-		lSourceApp, sourceAppOk := m["source_app"]
-		lSourceVer, sourceVerOk := m["source_version"]
-		lDestSvcNs, destSvcNsOk := m["destination_service_namespace"]
-		lDestSvcName, destSvcNameOk := m["destination_service_name"]
-		lDestWl, destWlOk := m["destination_workload"]
-		lDestApp, destAppOk := m["destination_app"]
-		lDestVer, destVerOk := m["destination_version"]
-		lCode, codeOk := m["response_code"]
+		lSourceWlNs, sourceWlNsOk := m["namespace"]
+		lSourceWl, sourceWlOk := m["deployment"]
+		lDestSvcNs, destSvcNsOk := m["dst_namespace"]
+		lDestSvcName, destSvcNameOk := m["dst_service"]
+		lDestWl, destWlOk := m["dst_deployment"]
 
-		if !sourceWlNsOk || !sourceWlOk || !sourceAppOk || !sourceVerOk || !destSvcNsOk || !destSvcNameOk || !destWlOk || !destAppOk || !destVerOk || !codeOk {
+		if !sourceWlNsOk || !sourceWlOk || !destSvcNsOk || !destSvcNameOk || !destWlOk {
 			log.Warningf("Skipping %s, missing expected TS labels", m.String())
 			continue
 		}
 
 		sourceWlNs := string(lSourceWlNs)
 		sourceWl := string(lSourceWl)
-		sourceApp := string(lSourceApp)
-		sourceVer := string(lSourceVer)
+		sourceApp := "Unknown"
+		sourceVer := "Unknown"
 		destSvcNs := string(lDestSvcNs)
 		destSvcName := string(lDestSvcName)
 		destWl := string(lDestWl)
-		destApp := string(lDestApp)
-		destVer := string(lDestVer)
-		code := string(lCode)
+		destApp := "Unknown"
+		destVer := "Unknown"
+		code := "200"
 
 		val := float64(s.Value)
 

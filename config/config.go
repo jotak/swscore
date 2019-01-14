@@ -171,7 +171,7 @@ func NewConfig() (c *Config) {
 	c.Identity.CertFile = getDefaultString(EnvIdentityCertFile, "")
 	c.Identity.PrivateKeyFile = getDefaultString(EnvIdentityPrivateKeyFile, "")
 	c.InCluster = getDefaultBool(EnvInCluster, true)
-	c.IstioNamespace = strings.TrimSpace(getDefaultString(EnvIstioNamespace, "istio-system"))
+	c.IstioNamespace = strings.TrimSpace(getDefaultString(EnvIstioNamespace, "linkerd"))
 	c.IstioLabels.AppLabelName = strings.TrimSpace(getDefaultString(EnvIstioLabelNameApp, "app"))
 	c.IstioLabels.VersionLabelName = strings.TrimSpace(getDefaultString(EnvIstioLabelNameVersion, "version"))
 	c.API.Namespaces.Exclude = getDefaultStringArray(EnvApiNamespacesExclude, "istio-operator,kube.*,openshift.*,ibm.*")
@@ -188,7 +188,7 @@ func NewConfig() (c *Config) {
 	c.Server.CORSAllowAll = getDefaultBool(EnvServerCORSAllowAll, false)
 
 	// Prometheus configuration
-	c.ExternalServices.PrometheusServiceURL = strings.TrimSpace(getDefaultString(EnvPrometheusServiceURL, "http://prometheus.istio-system:9090"))
+	c.ExternalServices.PrometheusServiceURL = strings.TrimSpace(getDefaultString(EnvPrometheusServiceURL, "http://linkerd-prometheus.linkerd:9090"))
 	c.ExternalServices.PrometheusCustomMetricsURL = strings.TrimSpace(getDefaultString(EnvPrometheusCustomMetricsURL, c.ExternalServices.PrometheusServiceURL))
 
 	// Grafana Configuration
