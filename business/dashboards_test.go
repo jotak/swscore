@@ -38,14 +38,16 @@ func TestGetDashboard(t *testing.T) {
 
 	expectedLabels := "{namespace=\"my-namespace\",app=\"my-app\"}"
 	query := prometheus.CustomMetricsQuery{
-		Namespace: "my-namespace",
-		App:       "my-app",
+		LabelFilters: map[string]string{
+			"namespace": "my-namespace",
+			"app":       "my-app",
+		},
 	}
 	query.FillDefaults()
 	prom.On("FetchRateRange", "my_metric_1", expectedLabels, "", &query.BaseMetricsQuery).Return(fakeCounter(10))
 	prom.On("FetchHistogramRange", "my_metric_2", expectedLabels, "", &query.BaseMetricsQuery).Return(fakeHistogram(11))
 
-	dashboard, err := service.GetDashboard(query, "dashboard1")
+	dashboard, err := service.GetDashboard("my-namespace", query, "dashboard1")
 
 	assert.Nil(err)
 	k8s.AssertNumberOfCalls(t, "GetDashboard", 1)
@@ -74,14 +76,16 @@ func TestGetDashboardFromKialiNamespace(t *testing.T) {
 
 	expectedLabels := "{namespace=\"my-namespace\",app=\"my-app\"}"
 	query := prometheus.CustomMetricsQuery{
-		Namespace: "my-namespace",
-		App:       "my-app",
+		LabelFilters: map[string]string{
+			"namespace": "my-namespace",
+			"app":       "my-app",
+		},
 	}
 	query.FillDefaults()
 	prom.On("FetchRateRange", "my_metric_1", expectedLabels, "", &query.BaseMetricsQuery).Return(fakeCounter(10))
 	prom.On("FetchHistogramRange", "my_metric_2", expectedLabels, "", &query.BaseMetricsQuery).Return(fakeHistogram(11))
 
-	dashboard, err := service.GetDashboard(query, "dashboard1")
+	dashboard, err := service.GetDashboard("my-namespace", query, "dashboard1")
 
 	assert.Nil(err)
 	k8s.AssertNumberOfCalls(t, "GetDashboard", 2)

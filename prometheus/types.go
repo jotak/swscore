@@ -1,6 +1,8 @@
 package prometheus
 
 import (
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/prometheus/client_golang/api/prometheus/v1"
@@ -14,7 +16,7 @@ type BaseMetricsQuery struct {
 	RateFunc     string
 	Quantiles    []string
 	Avg          bool
-	ByLabels     []string
+	LabelGroups  []string
 }
 
 // FillDefaults fills the struct with default parameters
@@ -50,10 +52,17 @@ func (q *IstioMetricsQuery) FillDefaults() {
 // CustomMetricsQuery holds query parameters for a custom metrics query
 type CustomMetricsQuery struct {
 	BaseMetricsQuery
-	Namespace         string
-	App               string
-	Version           string
+	LabelFilters      map[string]string
 	RawDataAggregator string
+}
+
+// BuildLabelStrings returns the labels map as promQL fragment
+func (q *CustomMetricsQuery) BuildLabelStrings() string {
+	labels := []string{}
+	for k, v := range q.LabelFilters {
+		labels = append(labels, fmt.Sprintf(`%s="%s"`, k, v))
+	}
+	return "{" + strings.Join(labels, ",") + "}"
 }
 
 // FillDefaults fills the struct with default parameters

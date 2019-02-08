@@ -110,14 +110,19 @@ func CustomDashboard(w http.ResponseWriter, r *http.Request) {
 
 	svc := business.NewDashboardsService(monitoringClient, prom)
 
-	params := prometheus.CustomMetricsQuery{Namespace: namespace, App: app}
+	params := prometheus.CustomMetricsQuery{
+		LabelFilters: map[string]string{
+			"namespace": namespace,
+			"app":       app,
+		},
+	}
 	err = extractCustomMetricsQueryParams(r, &params, namespaceInfo)
 	if err != nil {
 		RespondWithError(w, http.StatusBadRequest, err.Error())
 		return
 	}
 
-	dashboard, err := svc.GetDashboard(params, template)
+	dashboard, err := svc.GetDashboard(namespace, params, template)
 	if err != nil {
 		if errors.IsNotFound(err) {
 			RespondWithError(w, http.StatusNotFound, err.Error())

@@ -1,7 +1,6 @@
 package business
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
@@ -40,18 +39,14 @@ func (in *DashboardsService) loadDashboardResource(namespace, template string) (
 }
 
 // GetDashboard returns a dashboard filled-in with target data
-func (in *DashboardsService) GetDashboard(params prometheus.CustomMetricsQuery, template string) (*models.MonitoringDashboard, error) {
-	dashboard, err := in.loadDashboardResource(params.Namespace, template)
+func (in *DashboardsService) GetDashboard(namespace string, params prometheus.CustomMetricsQuery, template string) (*models.MonitoringDashboard, error) {
+	dashboard, err := in.loadDashboardResource(namespace, template)
 	if err != nil {
 		return nil, err
 	}
 
-	labels := fmt.Sprintf(`{namespace="%s",app="%s"`, params.Namespace, params.App)
-	if params.Version != "" {
-		labels += fmt.Sprintf(`,version="%s"`, params.Version)
-	}
-	labels += "}"
-	grouping := strings.Join(params.ByLabels, ",")
+	labels := params.BuildLabelStrings()
+	grouping := strings.Join(params.LabelGroups, ",")
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(dashboard.Spec.Charts))

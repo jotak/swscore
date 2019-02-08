@@ -21,7 +21,7 @@ var (
 
 func getMetrics(api v1.API, q *IstioMetricsQuery) Metrics {
 	labels, labelsError := buildLabelStrings(q)
-	grouping := strings.Join(q.ByLabels, ",")
+	grouping := strings.Join(q.LabelGroups, ",")
 	metrics := fetchAllMetrics(api, q, labels, labelsError, grouping)
 	return metrics
 }

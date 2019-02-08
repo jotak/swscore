@@ -39,7 +39,7 @@ func TestExtractMetricsQueryParams(t *testing.T) {
 	assert.Equal(t, "5h", mq.RateInterval)
 	assert.Equal(t, "irate", mq.RateFunc)
 	assert.Equal(t, 10*time.Second, mq.Step)
-	assert.Equal(t, []string{"response_code"}, mq.ByLabels)
+	assert.Equal(t, []string{"response_code"}, mq.LabelGroups)
 	assert.Equal(t, []string{"request_count", "request_size"}, mq.Filters)
 	assert.Equal(t, "destination", mq.Reporter)
 	assert.Equal(t, "outbound", mq.Direction)

@@ -44,7 +44,10 @@ func extractIstioMetricsQueryParams(r *http.Request, q *prometheus.IstioMetricsQ
 func extractCustomMetricsQueryParams(r *http.Request, q *prometheus.CustomMetricsQuery, namespaceInfo *models.Namespace) error {
 	q.FillDefaults()
 	queryParams := r.URL.Query()
-	q.Version = queryParams.Get("version")
+	version := queryParams.Get("version")
+	if version != "" {
+		q.LabelFilters["version"] = version
+	}
 	op := queryParams.Get("rawDataAggregator")
 	// Explicit white-listing operators to prevent any kind of injection
 	// For a list of operators, see https://prometheus.io/docs/prometheus/latest/querying/operators/#aggregation-operators
@@ -114,7 +117,7 @@ func extractBaseMetricsQueryParams(queryParams url.Values, q *prometheus.BaseMet
 		}
 	}
 	if lbls, ok := queryParams["byLabels[]"]; ok && len(lbls) > 0 {
-		q.ByLabels = lbls
+		q.LabelGroups = lbls
 	}
 
 	// If needed, adjust interval -- Make sure query won't fetch data before the namespace creation
