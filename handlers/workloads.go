@@ -87,6 +87,32 @@ func getWorkloadMetrics(w http.ResponseWriter, r *http.Request, promSupplier pro
 	RespondWithJSON(w, http.StatusOK, metrics)
 }
 
+func WorkloadLogs(w http.ResponseWriter, r *http.Request) {
+	params := mux.Vars(r)
+
+	// Get business layer
+	business, err := getBusiness(r)
+	if err != nil {
+		RespondWithError(w, http.StatusInternalServerError, "Workloads initialization error: "+err.Error())
+		return
+	}
+	namespace := params["namespace"]
+	workload := params["workload"]
+
+	// Fetch and build workload
+	logs, err := business.Workload.GetWorkloadLogs(namespace, workload)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			RespondWithError(w, http.StatusNotFound, err.Error())
+		} else {
+			RespondWithError(w, http.StatusInternalServerError, err.Error())
+		}
+		return
+	}
+
+	RespondWithJSON(w, http.StatusOK, logs)
+}
+
 // WorkloadDashboard is the API handler to fetch Istio dashboard, related to a single workload
 func WorkloadDashboard(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)

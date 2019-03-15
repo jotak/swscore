@@ -1,6 +1,8 @@
 package kubernetes
 
 import (
+	"bytes"
+
 	"k8s.io/api/apps/v1beta1"
 	"k8s.io/api/apps/v1beta2"
 	auth_v1 "k8s.io/api/authorization/v1"
@@ -190,6 +192,28 @@ func (in *IstioClient) GetReplicationControllers(namespace string) ([]v1.Replica
 	} else {
 		return []v1.ReplicationController{}, err
 	}
+}
+
+func (in *IstioClient) GetLogs(namespace, workload string) (string, error) {
+	req := in.k8s.CoreV1().RESTClient().Get().
+		Namespace(namespace).
+		Name("details-v1-65f5c88859-2nrgr").
+		Resource("pods").
+		SubResource("log").
+		Param("container", "details")
+		// Param("timestamps", "true")
+
+	readCloser, err := req.Stream()
+	if err != nil {
+		return "", err
+	}
+
+	// var out string
+	defer readCloser.Close()
+	buf := new(bytes.Buffer)
+	buf.ReadFrom(readCloser)
+	//	_, err = io.Copy(out, readCloser)
+	return buf.String(), err
 }
 
 // GetService returns the definition of a specific service.

@@ -8,11 +8,14 @@ metadata:
 rules:
 - apiGroups: [""]
   resources:
+  - deployments
+  - deployments/log
   - configmaps
   - endpoints
   - namespaces
   - nodes
   - pods
+  - pods/log
   - services
   - replicationcontrollers
   - routes
@@ -23,6 +26,7 @@ rules:
 - apiGroups: ["extensions", "apps"]
   resources:
   - deployments
+  - deployments/log
   - statefulsets
   - replicasets
   verbs:

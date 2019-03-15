@@ -569,6 +569,13 @@ func NewRoutes() (r *Routes) {
 			handlers.WorkloadMetrics,
 			true,
 		},
+		{
+			"WorkloadLogs",
+			"GET",
+			"/api/namespaces/{namespace}/workloads/{workload}/logs",
+			handlers.WorkloadLogs,
+			true,
+		},
 		// swagger:route GET /namespaces/{namespace}/services/{service}/dashboard services serviceDashboard
 		// ---
 		// Endpoint to fetch dashboard to be displayed, related to a single service

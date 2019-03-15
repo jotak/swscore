@@ -106,6 +106,10 @@ func (in *WorkloadService) GetWorkload(namespace string, workloadName string, in
 	return workload, nil
 }
 
+func (in *WorkloadService) GetWorkloadLogs(namespace string, workloadName string) (string, error) {
+	return in.k8s.GetLogs(namespace, workloadName)
+}
+
 func (in *WorkloadService) GetPods(namespace string, labelSelector string) (models.Pods, error) {
 	var err error
 	promtimer := internalmetrics.GetGoFunctionMetric("business", "WorkloadService", "GetPods")
