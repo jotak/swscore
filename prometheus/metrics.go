@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/prometheus/client_golang/api/prometheus/v1"
@@ -13,6 +12,7 @@ import (
 
 	"github.com/kiali/kiali/log"
 	"github.com/kiali/kiali/prometheus/internalmetrics"
+	"github.com/kiali/kiali/util"
 )
 
 var (
@@ -61,65 +61,47 @@ func buildLabelStrings(q *IstioMetricsQuery) (string, string) {
 }
 
 func fetchAllMetrics(api v1.API, q *IstioMetricsQuery, labels, labelsError, grouping string) Metrics {
-	var wg sync.WaitGroup
-	fetchRate := func(p8sFamilyName string, metric **Metric, lbl string) {
-		defer wg.Done()
-		m := fetchRateRange(api, p8sFamilyName, lbl, grouping, &q.BaseMetricsQuery)
-		*metric = m
-	}
-
-	fetchHisto := func(p8sFamilyName string, histo *Histogram) {
-		defer wg.Done()
-		h := fetchHistogramRange(api, p8sFamilyName, labels, grouping, &q.BaseMetricsQuery)
-		*histo = h
-	}
-
-	type resultHolder struct {
+	type metricHolder struct {
 		metric     *Metric
+		definition istioMetric
+	}
+	type histoHolder struct {
 		histo      Histogram
 		definition istioMetric
 	}
-	maxResults := len(istioMetrics)
-	if len(q.Filters) != 0 {
-		maxResults = len(q.Filters)
-	}
-	results := make([]*resultHolder, maxResults, maxResults)
 
-	for _, istioMetric := range istioMetrics {
-		// if filters is empty, fetch all anyway
-		doFetch := len(q.Filters) == 0
-		if !doFetch {
-			for _, filter := range q.Filters {
-				if filter == istioMetric.kialiName {
-					doFetch = true
-					break
+	// If filters is empty, fetch all anyway
+	fetchAll := len(q.Filters) == 0
+	filtersSet := util.StringSet(q.Filters)
+	cMetric := make(chan metricHolder)
+	cHisto := make(chan histoHolder)
+	fetchedCounter := 0
+
+	for _, metric := range istioMetrics {
+		if _, ok := filtersSet[metric.kialiName]; fetchAll || ok {
+			fetchedCounter++
+			go func(def istioMetric) {
+				if def.isHisto {
+					h := fetchHistogramRange(api, def.istioName, labels, grouping, &q.BaseMetricsQuery)
+					cHisto <- histoHolder{definition: def, histo: h}
+				} else {
+					labelsToUse := def.labelsToUse(labels, labelsError)
+					m := fetchRateRange(api, def.istioName, labelsToUse, grouping, &q.BaseMetricsQuery)
+					cMetric <- metricHolder{definition: def, metric: m}
 				}
-			}
-		}
-		if doFetch {
-			wg.Add(1)
-			result := resultHolder{definition: istioMetric}
-			results = append(results, &result)
-			if istioMetric.isHisto {
-				go fetchHisto(istioMetric.istioName, &result.histo)
-			} else {
-				labelsToUse := istioMetric.labelsToUse(labels, labelsError)
-				go fetchRate(istioMetric.istioName, &result.metric, labelsToUse)
-			}
+			}(metric)
 		}
 	}
-	wg.Wait()
 
 	// Return results as two maps per reporter
 	metrics := make(map[string]*Metric)
 	histograms := make(map[string]Histogram)
-	for _, result := range results {
-		if result != nil {
-			if result.definition.isHisto {
-				histograms[result.definition.kialiName] = result.histo
-			} else {
-				metrics[result.definition.kialiName] = result.metric
-			}
+	for i := 0; i < fetchedCounter; i++ {
+		select {
+		case h := <-cHisto:
+			histograms[h.definition.kialiName] = h.histo
+		case m := <-cMetric:
+			metrics[m.definition.kialiName] = m.metric
 		}
 	}
 	return Metrics{
