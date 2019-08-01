@@ -110,7 +110,7 @@ func (in *SvcService) buildServiceList(namespace models.Namespace, svcs []core_v
 	return &models.ServiceList{Namespace: namespace, Services: services, Validations: validations}
 }
 
-//GetServiceApiDocumentation returns the api documentation fetched from a service
+// GetServiceApiDocumentation returns the api documentation fetched from a service
 func (in *SvcService) GetServiceApiDocumentation(namespace, service string) (string, error) {
 	var err error
 	promtimer := internalmetrics.GetGoFunctionMetric("business", "SvcService", "GetServiceApiDocumentation")
@@ -182,19 +182,12 @@ func (in *SvcService) GetService(namespace, service, interval string, queryTime 
 	var vs, dr []kubernetes.IstioObject
 	var ws models.Workloads
 	var nsmtls models.MTLSStatus
-	var apidoc models.ApiDocumentation
+	var apiDocType string
 
 	conf := config.Get()
 	apiSpecFromAnnotation := svc.ObjectMeta.Annotations[conf.ApiDocumentation.Annotations.ApiSpecAnnotationName]
-	apiTypeFromAnnotation := svc.ObjectMeta.Annotations[conf.ApiDocumentation.Annotations.ApiTypeAnnotationName]
-	apiBaseUrl := ""
 	if apiSpecFromAnnotation != "" {
-		apiBaseUrl = conf.Server.WebRoot + "/api/namespaces/" + namespace + "/services/" + service
-	}
-
-	apidoc = models.ApiDocumentation{
-		Type:    apiTypeFromAnnotation,
-		BaseUrl: apiBaseUrl,
+		apiDocType = svc.ObjectMeta.Annotations[conf.ApiDocumentation.Annotations.ApiTypeAnnotationName]
 	}
 
 	wg := sync.WaitGroup{}
@@ -301,7 +294,7 @@ func (in *SvcService) GetService(namespace, service, interval string, queryTime 
 	s.SetVirtualServices(vs, vsCreate, vsUpdate, vsDelete)
 	s.SetDestinationRules(dr, drCreate, drUpdate, drDelete)
 	s.SetErrorTraces(eTraces)
-	s.SetApiDocumentation(apidoc)
+	s.SetApiDocumentationType(apiDocType)
 	return &s, nil
 }
 
