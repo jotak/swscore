@@ -2314,6 +2314,33 @@
         }
       }
     },
+    "/namespaces/{namespace}/services/{service}/traces": {
+      "get": {
+        "description": "Endpoint to get a specific trace of a given service",
+        "produces": [
+          "application/json"
+        ],
+        "schemes": [
+          "http",
+          "https"
+        ],
+        "tags": [
+          "traces"
+        ],
+        "operationId": "tracesDeatil",
+        "responses": {
+          "200": {
+            "$ref": "#/responses/serviceDetailsResponse"
+          },
+          "404": {
+            "$ref": "#/responses/notFoundError"
+          },
+          "500": {
+            "$ref": "#/responses/internalError"
+          }
+        }
+      }
+    },
     "/namespaces/{namespace}/tls": {
       "get": {
         "description": "Get TLS status for the given namespace",

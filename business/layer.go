@@ -19,6 +19,7 @@ type Layer struct {
 	Workload       WorkloadService
 	App            AppService
 	Namespace      NamespaceService
+	Jaeger         JaegerService
 	k8s            kubernetes.IstioClientInterface
 	OpenshiftOAuth OpenshiftOAuthService
 	TLS            TLSService
@@ -70,6 +71,7 @@ func Get(token string) (*Layer, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Use an existing Jaeger client if it exists, otherwise create and use in the future
 
 	// Use an existing Prometheus client if it exists, otherwise create and use in the future
 	if prometheusClient == nil {
@@ -100,6 +102,7 @@ func NewWithBackends(k8s kubernetes.IstioClientInterface, prom prometheus.Client
 	temporaryLayer.Validations = IstioValidationsService{k8s: k8s, businessLayer: temporaryLayer}
 	temporaryLayer.App = AppService{prom: prom, k8s: k8s, businessLayer: temporaryLayer}
 	temporaryLayer.Namespace = NewNamespaceService(k8s)
+	temporaryLayer.Jaeger = JaegerService{businessLayer: temporaryLayer}
 	temporaryLayer.k8s = k8s
 	temporaryLayer.OpenshiftOAuth = OpenshiftOAuthService{k8s: k8s}
 	temporaryLayer.TLS = TLSService{k8s: k8s, businessLayer: temporaryLayer}

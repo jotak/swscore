@@ -28,6 +28,8 @@ import:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
 - package: github.com/hashicorp/golang-lru/simplelru
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
+- package: github.com/jaegertracing/jaeger
+  version: 8c89e641eacafc5315de3c6486d398d6ce0d441c
 - package: github.com/openshift/api
   version: release-3.11
 - package: github.com/openshift/client-go

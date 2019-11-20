@@ -1,5 +1,5 @@
-hash: 2e78200c8ee91d3827819b6dacfc27cd8e801bd31951b4d694fc9b175408ab1d
-updated: 2019-10-01T09:18:38.747053855+02:00
+hash: 0f2e5f7b7f0527cadc1f8823b298277263c38c2f104c24c76c948034c80670e6
+updated: 2019-11-25T17:14:53.865167592+01:00
 imports:
 - name: github.com/beorn7/perks
   version: 37c8de3658fcb183f997c4e13e8337516ab753e6
@@ -50,6 +50,10 @@ imports:
   version: a0d98a5f288019575c6d1f4bb1573fef2d1fcdc4
   subpackages:
   - simplelru
+- name: github.com/jaegertracing/jaeger
+  version: 8c89e641eacafc5315de3c6486d398d6ce0d441c
+  subpackages:
+  - model/json
 - name: github.com/json-iterator/go
   version: f2b4162afba35581b6d4a50d3b8f34e33c144682
 - name: github.com/jtblin/go-ldap-client
@@ -110,7 +114,7 @@ imports:
   - internal/bitbucket.org/ww/goautoneg
   - model
 - name: github.com/prometheus/procfs
-  version: de25ac347ef9305868b04dc42425c973b863b18c
+  version: 88d9babf34a867db12a41c5f1d666abed0454894
   subpackages:
   - internal/fs
   - internal/util
@@ -150,7 +154,7 @@ imports:
   subpackages:
   - rate
 - name: gopkg.in/asn1-ber.v1
-  version: f715ec2f112d1e4195b827ad68cf44017a3ef2b1
+  version: 29be175fc3a3b1787c008093b829fbfee40decd6
 - name: gopkg.in/inf.v0
   version: 3887ee99ecf07df5b447e9b00d9c0b2adaa9f3e4
 - name: gopkg.in/ldap.v2
@@ -220,24 +224,20 @@ imports:
   - pkg/util/framer
   - pkg/util/intstr
   - pkg/util/json
-  - pkg/util/mergepatch
   - pkg/util/net
   - pkg/util/runtime
   - pkg/util/sets
-  - pkg/util/strategicpatch
   - pkg/util/validation
   - pkg/util/validation/field
   - pkg/util/wait
   - pkg/util/yaml
   - pkg/version
   - pkg/watch
-  - third_party/forked/golang/json
   - third_party/forked/golang/reflect
 - name: k8s.io/client-go
   version: 7d04d0e2a0a1a4d4a1cd6baa432a2301492e4e65
   subpackages:
   - discovery
-  - discovery/fake
   - informers
   - informers/admissionregistration
   - informers/admissionregistration/v1alpha1
@@ -280,66 +280,36 @@ imports:
   - informers/storage/v1alpha1
   - informers/storage/v1beta1
   - kubernetes
-  - kubernetes/fake
   - kubernetes/scheme
   - kubernetes/typed/admissionregistration/v1alpha1
-  - kubernetes/typed/admissionregistration/v1alpha1/fake
   - kubernetes/typed/admissionregistration/v1beta1
-  - kubernetes/typed/admissionregistration/v1beta1/fake
   - kubernetes/typed/apps/v1
-  - kubernetes/typed/apps/v1/fake
   - kubernetes/typed/apps/v1beta1
-  - kubernetes/typed/apps/v1beta1/fake
   - kubernetes/typed/apps/v1beta2
-  - kubernetes/typed/apps/v1beta2/fake
   - kubernetes/typed/authentication/v1
-  - kubernetes/typed/authentication/v1/fake
   - kubernetes/typed/authentication/v1beta1
-  - kubernetes/typed/authentication/v1beta1/fake
   - kubernetes/typed/authorization/v1
-  - kubernetes/typed/authorization/v1/fake
   - kubernetes/typed/authorization/v1beta1
-  - kubernetes/typed/authorization/v1beta1/fake
   - kubernetes/typed/autoscaling/v1
-  - kubernetes/typed/autoscaling/v1/fake
   - kubernetes/typed/autoscaling/v2beta1
-  - kubernetes/typed/autoscaling/v2beta1/fake
   - kubernetes/typed/batch/v1
-  - kubernetes/typed/batch/v1/fake
   - kubernetes/typed/batch/v1beta1
-  - kubernetes/typed/batch/v1beta1/fake
   - kubernetes/typed/batch/v2alpha1
-  - kubernetes/typed/batch/v2alpha1/fake
   - kubernetes/typed/certificates/v1beta1
-  - kubernetes/typed/certificates/v1beta1/fake
   - kubernetes/typed/core/v1
-  - kubernetes/typed/core/v1/fake
   - kubernetes/typed/events/v1beta1
-  - kubernetes/typed/events/v1beta1/fake
   - kubernetes/typed/extensions/v1beta1
-  - kubernetes/typed/extensions/v1beta1/fake
   - kubernetes/typed/networking/v1
-  - kubernetes/typed/networking/v1/fake
   - kubernetes/typed/policy/v1beta1
-  - kubernetes/typed/policy/v1beta1/fake
   - kubernetes/typed/rbac/v1
-  - kubernetes/typed/rbac/v1/fake
   - kubernetes/typed/rbac/v1alpha1
-  - kubernetes/typed/rbac/v1alpha1/fake
   - kubernetes/typed/rbac/v1beta1
-  - kubernetes/typed/rbac/v1beta1/fake
   - kubernetes/typed/scheduling/v1alpha1
-  - kubernetes/typed/scheduling/v1alpha1/fake
   - kubernetes/typed/scheduling/v1beta1
-  - kubernetes/typed/scheduling/v1beta1/fake
   - kubernetes/typed/settings/v1alpha1
-  - kubernetes/typed/settings/v1alpha1/fake
   - kubernetes/typed/storage/v1
-  - kubernetes/typed/storage/v1/fake
   - kubernetes/typed/storage/v1alpha1
-  - kubernetes/typed/storage/v1alpha1/fake
   - kubernetes/typed/storage/v1beta1
-  - kubernetes/typed/storage/v1beta1/fake
   - listers/admissionregistration/v1alpha1
   - listers/admissionregistration/v1beta1
   - listers/apps/v1
@@ -372,7 +342,6 @@ imports:
   - plugin/pkg/client/auth/exec
   - rest
   - rest/watch
-  - testing
   - tools/cache
   - tools/clientcmd/api
   - tools/metrics
@@ -387,6 +356,4 @@ imports:
   - util/retry
 - name: k8s.io/kube-openapi
   version: 91cfa479c814065e420cee7ed227db0f63a5854e
-  subpackages:
-  - pkg/util/proto
 testImports: []
