@@ -162,6 +162,12 @@ const (
 	Iter8ExperimentType     = "Experiment"
 	Iter8ExperimentTypeList = "ExperimentList"
 	Iter8ConfigMap          = "iter8config-metrics"
+
+	// Kiali types
+
+	GraphAdapters        = "graphadapters"
+	GraphAdapterType     = "GraphAdapter"
+	GraphAdapterTypeList = "GraphAdapterList"
 )
 
 var (
@@ -213,6 +219,13 @@ var (
 		Version: "v1alpha1",
 	}
 	ApiIter8Version = Iter8GroupVersion.Group + "/" + Iter8GroupVersion.Version
+
+	// We will add a new extesion API in a similar way as we added the Kubernetes + Istio APIs
+	KialiGroupVersion = schema.GroupVersion{
+		Group:   "monitoring.kiali.io",
+		Version: "v1alpha1",
+	}
+	ApiKialiVersion = KialiGroupVersion.Group + "/" + KialiGroupVersion.Version
 
 	networkingTypes = []struct {
 		objectKind     string
@@ -393,6 +406,16 @@ var (
 		},
 	}
 
+	graphAdapterTypes = []struct {
+		objectKind     string
+		collectionKind string
+	}{
+		{
+			objectKind:     GraphAdapterType,
+			collectionKind: GraphAdapterTypeList,
+		},
+	}
+
 	// A map to get the plural for a Istio type using the singlar type
 	PluralType = map[string]string{
 		// Networking
@@ -435,6 +458,8 @@ var (
 
 		// Iter8
 		Iter8Experiments: Iter8ExperimentType,
+
+		GraphAdapters: GraphAdapterType,
 	}
 
 	ResourceTypesToAPI = map[string]string{
@@ -468,6 +493,7 @@ var (
 		RequestAuthentications: SecurityGroupVersion.Group,
 		// Extensions
 		Iter8Experiments: Iter8GroupVersion.Group,
+		GraphAdapters:    KialiGroupVersion.Group,
 	}
 
 	ApiToVersion = map[string]string{
@@ -478,6 +504,7 @@ var (
 		MaistraAuthenticationGroupVersion.Group: ApiMaistraAuthenticationVersion,
 		MaistraRbacGroupVersion.Group:           ApiMaistraRbacVersion,
 		SecurityGroupVersion.Group:              ApiSecurityVersion,
+		KialiGroupVersion.Group:                 ApiKialiVersion,
 	}
 )
 

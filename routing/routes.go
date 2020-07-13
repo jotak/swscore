@@ -1395,6 +1395,20 @@ func NewRoutes() (r *Routes) {
 			handlers.Iter8Metrics,
 			true,
 		},
+		{
+			"GenericGraphAdapters",
+			"GET",
+			"/api/gga",
+			handlers.GenericGraphAdapters,
+			true,
+		},
+		{
+			"GenericGraph",
+			"GET",
+			"/api/gg",
+			handlers.GenericGraph,
+			true,
+		},
 	}
 
 	return

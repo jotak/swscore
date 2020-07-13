@@ -1,0 +1,61 @@
+apiVersion: monitoring.kiali.io/v1alpha1
+kind: GraphAdapter
+metadata:
+  name: istio-sr
+spec:
+  title: "Istio"
+  metrics:
+    - name: "HTTP requests rate"
+      query: "istio_requests_total"
+      filters: 'reporter="source",request_protocol="http"'
+      function: "rate"
+      unit: "rps"
+      scale: 1
+      generatesGraph: true
+      edgeLabels: true
+      errors:
+        fromLabel:
+          name: "error_code"
+          regex: "[4|5].."
+    - name: "GRPC requests rate"
+      query: "istio_requests_total"
+      filters: 'reporter="source",request_protocol="grpc"'
+      function: "rate"
+      unit: "rps"
+      scale: 1
+      generatesGraph: true
+      edgeLabels: true
+      errors:
+        fromLabel:
+          name: "grpc_status"
+          regex: "^0"
+    - name: "TCP rate"
+      query: "istio_tcp_send_bytes_total"
+      filters: 'reporter="source"'
+      function: "rate"
+      unit: "bps"
+      scale: 1
+      generatesGraph: true
+      edgeLabels: true
+  aggregations:
+    - name: "Application"
+      sourceLabels: ["source_app"]
+      sourceNamespaceLabel: "source_workload_namespace"
+      destLabels: ["destination_app"]
+      destNamespaceLabel: "destination_workload_namespace"
+      kubernetesEquivalence:
+        podLabels: ["app"]
+    - name: "Workload"
+      sourceLabels: ["source_workload"]
+      sourceNamespaceLabel: "source_workload_namespace"
+      destLabels: ["destination_workload"]
+      destNamespaceLabel: "destination_workload_namespace"
+      kubernetesEquivalence:
+        kinds:
+          - "Deployment"
+          - "StatefulSet"
+  intermediateNodes:
+    - name: "Service"
+      label: ["destination_service"]
+      kubernetesEquivalence:
+        kinds: ["Service"]

@@ -40,6 +40,7 @@ func (in *K8SClient) getApiClientVersion(apiGroup string) (*rest.RESTClient, str
 	} else if apiGroup == SecurityGroupVersion.Group {
 		return in.istioSecurityApi, ApiSecurityVersion
 	}
+	log.Errorf("getApiClientVersion: provided API Group '%s' is not linked to any API", apiGroup)
 	return nil, ""
 }
 

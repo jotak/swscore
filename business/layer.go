@@ -27,6 +27,7 @@ type Layer struct {
 	ThreeScale     ThreeScaleService
 	Iter8          Iter8Service
 	IstioStatus    IstioStatusService
+	GenericGraph   GenericGraphService
 }
 
 // Global clientfactory and prometheus clients.
@@ -116,6 +117,7 @@ func NewWithBackends(k8s kubernetes.ClientInterface, prom prometheus.ClientInter
 	temporaryLayer.ThreeScale = ThreeScaleService{k8s: k8s}
 	temporaryLayer.Iter8 = Iter8Service{k8s: k8s, businessLayer: temporaryLayer}
 	temporaryLayer.IstioStatus = IstioStatusService{k8s: k8s}
+	temporaryLayer.GenericGraph = GenericGraphService{prom: prom, k8s: k8s}
 
 	return temporaryLayer
 }

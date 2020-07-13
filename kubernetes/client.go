@@ -73,6 +73,11 @@ type OSClientInterface interface {
 	GetRoute(namespace string, name string) (*osroutes_v1.Route, error)
 }
 
+type GraphAdapterClientInterface interface {
+	GetGraphAdapter(namespace, name string) (*GraphAdapter, error)
+	GetGraphAdapters(namespace string) ([]GraphAdapter, error)
+}
+
 // ClientInterface for mocks (only mocked function are necessary here)
 type ClientInterface interface {
 	GetServerVersion() (*version.Info, error)
@@ -85,6 +90,7 @@ type ClientInterface interface {
 	IstioClientInterface
 	Iter8ClientInterface
 	OSClientInterface
+	GraphAdapterClientInterface
 }
 
 // K8SClient is the client struct for Kubernetes and Istio APIs
@@ -101,6 +107,7 @@ type K8SClient struct {
 	maistraAuthenticationApi *rest.RESTClient
 	maistraRbacApi           *rest.RESTClient
 	iter8Api                 *rest.RESTClient
+	graphAdapterAPI          *rest.RESTClient
 	// isOpenShift private variable will check if kiali is deployed under an OpenShift cluster or not
 	// It is represented as a pointer to include the initialization phase.
 	// See kubernetes_service.go#IsOpenShift() for more details.
@@ -274,6 +281,10 @@ func NewClientFromConfig(config *rest.Config) (*K8SClient, error) {
 				scheme.AddKnownTypeWithName(Iter8GroupVersion.WithKind(rt.objectKind), &Iter8ExperimentObject{})
 				scheme.AddKnownTypeWithName(Iter8GroupVersion.WithKind(rt.collectionKind), &Iter8ExperimentObjectList{})
 			}
+			for _, rt := range graphAdapterTypes {
+				scheme.AddKnownTypeWithName(KialiGroupVersion.WithKind(rt.objectKind), &GraphAdapter{})
+				scheme.AddKnownTypeWithName(KialiGroupVersion.WithKind(rt.collectionKind), &GraphAdaptersList{})
+			}
 
 			meta_v1.AddToGroupVersion(scheme, ConfigGroupVersion)
 			meta_v1.AddToGroupVersion(scheme, NetworkingGroupVersion)
@@ -283,6 +294,7 @@ func NewClientFromConfig(config *rest.Config) (*K8SClient, error) {
 			meta_v1.AddToGroupVersion(scheme, MaistraRbacGroupVersion)
 			meta_v1.AddToGroupVersion(scheme, SecurityGroupVersion)
 			meta_v1.AddToGroupVersion(scheme, Iter8GroupVersion)
+			meta_v1.AddToGroupVersion(scheme, KialiGroupVersion)
 			return nil
 		})
 
@@ -332,6 +344,11 @@ func NewClientFromConfig(config *rest.Config) (*K8SClient, error) {
 		return nil, err
 	}
 
+	graphAdapterAPI, err := newClientForAPI(config, KialiGroupVersion, types)
+	if err != nil {
+		return nil, err
+	}
+
 	client.istioConfigApi = istioConfigAPI
 	client.istioNetworkingApi = istioNetworkingAPI
 	client.istioAuthenticationApi = istioAuthenticationAPI
@@ -340,6 +357,7 @@ func NewClientFromConfig(config *rest.Config) (*K8SClient, error) {
 	client.maistraAuthenticationApi = maistraAuthenticationAPI
 	client.maistraRbacApi = maistraRbacApi
 	client.iter8Api = iter8Api
+	client.graphAdapterAPI = graphAdapterAPI
 	return &client, nil
 }
 

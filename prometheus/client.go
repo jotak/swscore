@@ -20,6 +20,7 @@ import (
 type ClientInterface interface {
 	FetchHistogramRange(metricName, labels, grouping string, q *BaseMetricsQuery) Histogram
 	FetchRange(metricName, labels, grouping, aggregator string, q *BaseMetricsQuery) *Metric
+	FetchRatePoint(metricName, labels, grouping string, t time.Time, rateInterval time.Duration) (model.Vector, error)
 	FetchRateRange(metricName, labels, grouping string, q *BaseMetricsQuery) *Metric
 	GetAllRequestRates(namespace, ratesInterval string, queryTime time.Time) (model.Vector, error)
 	GetAppRequestRates(namespace, app, ratesInterval string, queryTime time.Time) (model.Vector, model.Vector, error)
@@ -136,6 +137,34 @@ func (in *Client) FetchRateRange(metricName, labels, grouping string, q *BaseMet
 // FetchHistogramRange fetches bucketed metric as histogram in given range
 func (in *Client) FetchHistogramRange(metricName, labels, grouping string, q *BaseMetricsQuery) Histogram {
 	return fetchHistogramRange(in.api, metricName, labels, grouping, q)
+}
+
+// FetchRatePoint fetches a counter's rate point
+func (in *Client) FetchRatePoint(metricName, labels, grouping string, t time.Time, rateInterval time.Duration) (model.Vector, error) {
+	// Example: round(sum(rate(my_counter{foo=bar}[5m])) by (baz), 0.001)
+	innerQuery := fmt.Sprintf("%s%s[%ds]", metricName, labels, int(rateInterval.Seconds()))
+	var query string
+	if grouping == "" {
+		query = fmt.Sprintf("sum(rate(%s))", innerQuery)
+	} else {
+		query = fmt.Sprintf("sum(rate(%s)) by (%s)", innerQuery, grouping)
+	}
+	query = roundSignificant(query, 0.001)
+	return in.fetchPoint(query, t)
+}
+
+func (in *Client) fetchPoint(query string, t time.Time) (model.Vector, error) {
+	result, err := in.api.Query(context.Background(), query, t)
+	log.Infof("Query: %s", query)
+	if err != nil {
+		return nil, fmt.Errorf("query failed (t=%v, q=%s): %v", t, query, err)
+	}
+	switch result.Type() {
+	case model.ValVector:
+		log.Infof("Results: %v", result)
+		return result.(model.Vector), nil
+	}
+	return nil, fmt.Errorf("invalid query, vector expected: %s", query)
 }
 
 // API returns the Prometheus V1 HTTP API for performing calls not supported natively by this client

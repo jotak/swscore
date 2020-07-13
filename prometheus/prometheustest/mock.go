@@ -200,6 +200,11 @@ func (o *PromClientMock) FetchRateRange(metricName, labels, grouping string, q *
 	return args.Get(0).(*prometheus.Metric)
 }
 
+func (o *PromClientMock) FetchRatePoint(metricName, labels, grouping string, t time.Time, rateInterval time.Duration) (model.Vector, error) {
+	args := o.Called(metricName, labels, grouping, t, rateInterval)
+	return args.Get(0).(model.Vector), args.Error(1)
+}
+
 func (o *PromClientMock) FetchHistogramRange(metricName, labels, grouping string, q *prometheus.BaseMetricsQuery) prometheus.Histogram {
 	args := o.Called(metricName, labels, grouping, q)
 	return args.Get(0).(prometheus.Histogram)
