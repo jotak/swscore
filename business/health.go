@@ -114,7 +114,7 @@ func (in *HealthService) GetNamespaceAppHealth(namespace, rateInterval string, q
 	promtimer := internalmetrics.GetGoFunctionMetric("business", "HealthService", "GetNamespaceAppHealth")
 	defer promtimer.ObserveNow(&err)
 
-	appEntities, err := fetchNamespaceApps(in.businessLayer, namespace, "")
+	appEntities, err := fetchNamespaceApps(in.businessLayer, namespace)
 	if err != nil {
 		return nil, err
 	}

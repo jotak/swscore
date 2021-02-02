@@ -58,7 +58,7 @@ func (in *AppService) GetAppList(namespace string) (models.AppList, error) {
 		Namespace: models.Namespace{Name: namespace},
 		Apps:      []models.AppListItem{},
 	}
-	apps, err := fetchNamespaceApps(in.businessLayer, namespace, "")
+	apps, err := fetchNamespaceApps(in.businessLayer, namespace)
 	if err != nil {
 		return *appList, err
 	}
@@ -94,16 +94,9 @@ func (in *AppService) GetApp(namespace string, appName string) (models.App, erro
 	defer promtimer.ObserveNow(&err)
 
 	appInstance := &models.App{Namespace: models.Namespace{Name: namespace}, Name: appName}
-	namespaceApps, err := fetchNamespaceApps(in.businessLayer, namespace, appName)
+	appDetails, err := fetchNamespaceApp(in.businessLayer, namespace, appName)
 	if err != nil {
 		return *appInstance, err
-	}
-
-	var appDetails *appDetails
-	var ok bool
-	// Send a NewNotFound if the app is not found in the deployment list, instead to send an empty result
-	if appDetails, ok = namespaceApps[appName]; !ok {
-		return *appInstance, kubernetes.NewNotFound(appName, "Kiali", "App")
 	}
 
 	(*appInstance).Workloads = make([]models.WorkloadItem, len(appDetails.Workloads))
@@ -170,15 +163,12 @@ func castAppDetails(services []core_v1.Service, ws models.Workloads) namespaceAp
 // Helper method to fetch all applications for a given namespace.
 // Optionally if appName parameter is provided, it filters apps for that name.
 // Return an error on any problem.
-func fetchNamespaceApps(layer *Layer, namespace string, appName string) (namespaceApps, error) {
+func fetchNamespaceApps(layer *Layer, namespace string) (namespaceApps, error) {
 	var services []core_v1.Service
 	var ws models.Workloads
 	cfg := config.Get()
 
 	labelSelector := cfg.IstioLabels.AppLabelName
-	if appName != "" {
-		labelSelector = fmt.Sprintf("%s=%s", cfg.IstioLabels.AppLabelName, appName)
-	}
 
 	// Check if user has access to the namespace (RBAC) in cache scenarios and/or
 	// if namespace is accessible from Kiali (Deployment.AccessibleNamespaces)
@@ -198,10 +188,6 @@ func fetchNamespaceApps(layer *Layer, namespace string, appName string) (namespa
 			services, err = kialiCache.GetServices(namespace, nil)
 		} else {
 			services, err = layer.k8s.GetServices(namespace, nil)
-		}
-		if appName != "" {
-			selector := labels.Set(map[string]string{cfg.IstioLabels.AppLabelName: appName}).AsSelector()
-			services = kubernetes.FilterServicesForSelector(selector, services)
 		}
 		if err != nil {
 			log.Errorf("Error fetching Services per namespace %s: %s", namespace, err)
@@ -226,4 +212,63 @@ func fetchNamespaceApps(layer *Layer, namespace string, appName string) (namespa
 	}
 
 	return castAppDetails(services, ws), nil
+}
+
+// Helper method to fetch a single application for a given namespace.
+// Return an error on any problem.
+func fetchNamespaceApp(layer *Layer, namespace, appName string) (*appDetails, error) {
+	var services []core_v1.Service
+	var ws models.Workloads
+	cfg := config.Get()
+
+	labelSelector := fmt.Sprintf("%s=%s", cfg.IstioLabels.AppLabelName, appName)
+
+	// Check if user has access to the namespace (RBAC) in cache scenarios and/or
+	// if namespace is accessible from Kiali (Deployment.AccessibleNamespaces)
+	if _, err := layer.Namespace.GetNamespace(namespace); err != nil {
+		return nil, err
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	errChan := make(chan error, 2)
+
+	go func() {
+		defer wg.Done()
+		var err error
+		// Check if namespace is cached
+		if IsNamespaceCached(namespace) {
+			services, err = kialiCache.GetServices(namespace, nil)
+		} else {
+			services, err = layer.k8s.GetServices(namespace, nil)
+		}
+		if err != nil {
+			log.Errorf("Error fetching Services per namespace %s: %s", namespace, err)
+			errChan <- err
+		}
+		selector := labels.Set(map[string]string{cfg.IstioLabels.AppLabelName: appName}).AsSelector()
+		services = kubernetes.FilterServicesForSelector(selector, services)
+	}()
+
+	go func() {
+		defer wg.Done()
+		var err error
+		ws, err = fetchWorkloads(layer, namespace, labelSelector)
+		if err != nil {
+			log.Errorf("Error fetching Workload per namespace %s: %s", namespace, err)
+			errChan <- err
+		}
+	}()
+
+	wg.Wait()
+	if len(errChan) != 0 {
+		err := <-errChan
+		return nil, err
+	}
+
+	return &appDetails{
+		app:       appName,
+		Services:  services,
+		Workloads: ws,
+	}, nil
 }
